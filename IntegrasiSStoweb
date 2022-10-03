@@ -1,0 +1,63 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+static const int RXPin = 4, TXPin = 5;
+static const uint32_t GPSBaud = 9600;
+const char *ssid = "HWLIO"; //Nama Wifi
+const char *password = "rifqiganteng"; // pass wifi
+float latitude, longitude;
+String lat_str , lng_str;
+// The TinyGPS++ object
+TinyGPSPlus gps;
+WiFiClient client;
+// The serial connection to the GPS device
+SoftwareSerial ss(RXPin, TXPin);
+void setup() {
+Serial.begin(115200);
+ ss.begin(GPSBaud);
+ Serial.print("Connecting to");
+ Serial.println(ssid);
+ WiFi.begin(ssid, password);
+ while (WiFi.status() !=WL_CONNECTED){
+ delay(500);
+ Serial.print(".");
+ }
+ Serial.println("");
+ Serial.print("Connected to ");
+ Serial.println(ssid);
+ Serial.print("IP address: ");
+ Serial.println(WiFi.localIP()); //IP address assigned to your ESP
+}
+void loop() {
+ // This sketch displays information every time a new sentence is correctly 
+encoded.
+ while (ss.available() > 0){
+ if (gps.encode(ss.read()))
+ {
+ if (gps.location.isValid()){
+ latitude = gps.location.lat();
+ lat_str = String(latitude , 6);
+ longitude = gps.location.lng();
+ lng_str = String(longitude , 6);
+ Serial.println("SEGEL TERPUTUS");
+ Serial.print("Latitude = ");
+ Serial.println(lat_str);
+ Serial.print("Longitude = ");
+ Serial.println(lng_str);
+ 
+ delay(500);
+ 
+ String postData = (String)"latitude=" + lat_str + "&longitude=" + lng_str;
+ HTTPClient http;
+ http.begin("http://192.168.43.89:8080/segel/kirimdata.php");
+ http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+ auto httpCode = http.POST(postData);
+ String payload = http.getString();
+ Serial.println(postData);
+ Serial.println(payload);
+ http.end();
+}
+}
+ }
+}
